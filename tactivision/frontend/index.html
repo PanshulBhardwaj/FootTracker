@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tactivision</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#030504;--panel:#070b09;--line:#0f4a2e;--acc:#2cff7a;--A:#e0203a;--B:#2f7bff;--tx:#f2f6f4;--mut:#7d8a84}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--tx);font:12px/1.3 Inter,system-ui,sans-serif}
+.app{max-width:1500px;margin:0 auto;padding:8px 10px 14px;display:grid;gap:8px}
+.lab{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;color:var(--acc)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;overflow:hidden;min-width:0}
+.ph{padding:7px 10px;display:flex;gap:7px;align-items:center;border-bottom:1px solid #0b2a1b}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}.dot.A{background:var(--A)}.dot.B{background:var(--B)}
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:4px 2px}
+.brand{font-weight:800;font-size:20px;letter-spacing:.04em}.brand small{display:block;font-size:7px;color:var(--mut);letter-spacing:.2em;font-weight:400}
+.score{text-align:center;font-weight:800;font-size:15px}.score b{font-size:26px;margin:0 10px}.score .clk{display:block;color:var(--mut);font-size:10px;font-weight:400}
+.right{text-align:right;color:var(--mut);font-size:10px}.right i{color:var(--acc);font-style:normal;font-weight:800;margin-right:8px}
+.strip{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.card{padding:9px 11px 8px}.card .v{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 7px}
+.card .v b{font-size:26px;font-weight:800}.card .v span{font-size:15px;font-weight:600;color:#b8c2bd}
+.bar{height:2px;background:#0a2a1d;border-radius:2px;position:relative}.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--A)}.bar u{position:absolute;right:0;top:0;bottom:0;background:var(--B)}
+.na{color:var(--mut)!important}
+.event{display:flex;gap:10px;align-items:center;padding:8px 12px;color:#b8c2bd}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.55fr) minmax(0,1fr);gap:8px;align-items:start}
+.col{display:grid;gap:8px}
+.cv{position:relative;aspect-ratio:16/9;background:#000}.cv video,.cv canvas{position:absolute;inset:0;width:100%;height:100%}
+.ctl{display:flex;gap:8px;align-items:center;padding:6px 10px;border-top:1px solid #0b2a1b}
+.ctl input[type=range]{flex:1;accent-color:var(--acc)}
+button,select,input[type=file]{background:#0a140f;color:var(--tx);border:1px solid var(--line);border-radius:5px;padding:4px 8px;font:inherit}
+button:hover{border-color:var(--acc)} button:focus-visible,select:focus-visible{outline:2px solid var(--acc)}
+.bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pw{position:relative}.pw canvas{display:block;width:100%;aspect-ratio:105/68}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;color:var(--mut);font-size:11px;background:rgba(3,5,4,.82)}
+.sidepitch{padding:8px}
+.setup{padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.calb{display:grid;grid-template-columns:1fr minmax(260px,420px);gap:12px;padding:10px}
+.calt{color:#b8c2bd;line-height:1.6}.calt b{color:var(--acc)}.calc{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.cv.cal canvas#ov{cursor:crosshair}
+#diag{display:none;padding:8px 12px;font:11px/1.5 ui-monospace,monospace;color:#9fb;white-space:pre-wrap}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}.strip{grid-template-columns:repeat(4,1fr)}.bottom{grid-template-columns:1fr}.col.side{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.strip{grid-template-columns:repeat(2,1fr)}.col.side{grid-template-columns:1fr}}
+</style></head><body><div class="app">
+
+<header>
+ <div class="brand">TACTIVISION<small>AI-POWERED FOOTBALL INTELLIGENCE</small></div>
+ <div class="score"><span id="nA">Team A</span><b><span id="sA">—</span> - <span id="sB">—</span></b><span id="nB">Team B</span><span class="clk" id="clk">0:00</span></div>
+ <div class="right"><i id="live">IDLE</i><span id="frameinfo">no video</span> <button id="dbg" title="Diagnostics">diag</button></div>
+</header>
+
+<section class="panel setup">
+ <span class="lab">Source</span>
+ <label>Video <input type="file" id="vf" accept="video/*"></label>
+ <label>Analysis (state.json) <input type="file" id="sf" accept=".json"></label>
+ <label>Mode <select id="mode"><option value="balanced">Balanced</option><option value="accuracy_first">Accuracy first</option><option value="high_throughput">High throughput</option></select></label>
+ <label>Ball link <select id="bl"><option value=".45">strict</option><option value=".7" selected>normal</option><option value="1.0">loose</option></select></label><label>Team A attacks <select id="atk"><option value="">unknown</option><option value="r">right</option><option value="l">left</option></select></label><button id="dlp">Passes CSV</button><button id="run">Analyse on server</button><span id="msg" class="na"></span>
+</section>
+<pre class="panel" id="diag"></pre>
+
+<section class="strip" id="strip"></section>
+<section class="panel event"><span class="lab">Live event</span><span id="ev" class="na">No verified events yet</span></section>
+
+<main class="grid">
+ <div class="col side" id="colA"></div>
+ <div class="col">
+  <div class="panel">
+   <div class="cv"><video id="vid" playsinline></video><canvas id="ov"></canvas></div>
+   <div class="ctl"><button id="pp">Play</button><input type="range" id="seek" min="0" max="1000" value="0" aria-label="Seek"><span id="tm">0:00</span>
+    <button id="cal">Calibrate</button><select id="rate"><option>0.5</option><option selected>1</option><option>2</option></select></div>
+  </div>
+  <div class="panel" id="calp" style="display:none"><div class="ph"><span class="dot"></span><span class="lab">Manual pitch calibration</span><button id="calx" style="margin-left:auto">Close</button></div>
+   <div class="calb"><div class="calt"><div id="calmsg"></div><p style="margin-top:8px"><b>How:</b> pause on a frame where pitch lines are clear. Click a point on the pitch in the video (a line crossing or corner), then click the same spot on the diagram. Use 4+ points spread across the view, not all on one line. Include points from different depths if you can.</p>
+   <p style="margin-top:6px" class="na">A calibration holds only while the camera stays still. After a pan or zoom, scrub to that moment and calibrate again; it then applies from that time onward.</p>
+   <div class="calc"><label><input type="checkbox" id="lines" checked> Show pitch lines</label><button id="calu">Undo point</button><button id="calok">Apply calibration</button><button id="calc">Clear all</button></div><div id="calres" style="margin-top:6px"></div></div>
+   <div class="pw"><canvas id="rf" style="cursor:crosshair"></canvas></div></div></div>
+  <div class="bottom">
+   <div class="panel"><div class="ph"><span class="dot"></span><span class="lab">Player positions</span></div><div class="pw"><canvas id="mm"></canvas><div class="empty" id="mmE">Pitch not calibrated for this frame</div></div></div>
+   <div class="panel"><div class="ph"><span class="dot"></span><span class="lab">Pitch control</span><span id="pcv" class="na" style="margin-left:auto">—</span></div><div class="pw"><canvas id="pc"></canvas><div class="empty" id="pcE">Needs mapped players from both teams</div></div></div>
+   <div class="panel"><div class="ph"><span class="dot"></span><span class="lab">Pressing intensity</span></div><div class="pw"><canvas id="pr"></canvas><div class="empty" id="prE">No pressing data: needs the ball and a clear ball carrier</div></div></div>
+  </div>
+ </div>
+ <div class="col side" id="colB"></div>
+</main>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let S=null,VIDEO_URL=null,JOB=null;
+const COL={TEAM_A:'#e0203a',TEAM_B:'#2f7bff'},NONE='#8a9690';
+const teamName=t=>(S&&S.teams&&S.teams[t]&&S.teams[t].name)||(t==='TEAM_A'?'Team A':'Team B');
+
+// ---- pitch drawing (normalised coords, 105x68 proportions)
+function pitch(ctx,w,h,fill){
+  ctx.clearRect(0,0,w,h);if(fill){ctx.fillStyle=fill;ctx.fillRect(0,0,w,h)}
+  ctx.strokeStyle='rgba(190,220,205,.55)';ctx.lineWidth=1;const X=x=>x*w,Y=y=>y*h;
+  ctx.strokeRect(1,1,w-2,h-2);ctx.beginPath();ctx.moveTo(X(.5),0);ctx.lineTo(X(.5),h);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(X(.5),Y(.5),w*9.15/105,h*9.15/68,0,0,7);ctx.stroke();
+  const pa=[16.5/105,40.3/68],sa=[5.5/105,18.3/68];
+  for(const [d,s] of [[pa,0],[sa,0]]){ctx.strokeRect(1,Y(.5-d[1]/2),X(d[0]),Y(d[1]));ctx.strokeRect(X(1-d[0])-1,Y(.5-d[1]/2),X(d[0]),Y(d[1]))}
+}
+function arrow(x,a,b){x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();const an=Math.atan2(b[1]-a[1],b[0]-a[0]),s=7;
+ x.beginPath();x.moveTo(b[0],b[1]);x.lineTo(b[0]-s*Math.cos(an-.4),b[1]-s*Math.sin(an-.4));x.lineTo(b[0]-s*Math.cos(an+.4),b[1]-s*Math.sin(an+.4));x.closePath();x.fillStyle=x.strokeStyle;x.fill()}
+function sizeCanvas(c){const r=c.getBoundingClientRect();const d=devicePixelRatio||1;c.width=Math.max(2,r.width*d);c.height=Math.max(2,r.height*d);return [c.width,c.height]}
+
+// ---- layout of side columns
+function sideCols(){
+ for(const [id,T] of [['colA','TEAM_A'],['colB','TEAM_B']]){
+  const k=T==='TEAM_A'?'A':'B';
+  $(id).innerHTML=['Passes','Pass network','Heatmap'].map((n,i)=>`<div class="panel"><div class="ph"><span class="dot ${k}"></span><span class="lab">${n} · <span class="tn" data-t="${T}"></span></span>${i===0?`<span class="na" id="${k}cnt" style="margin-left:auto"></span>`:''}</div><div class="pw sidepitch"><canvas id="${k}${i}"></canvas><div class="empty" id="${k}${i}E"></div></div></div>`).join('');
+ }
+}
+function renderStrip(){
+ const m=METRICS||{};
+ const defs=[['Possession','possession','%',1],['Territory','territory','%',1],['xThreat','xthreat','',0],['Danger entries','danger_entries','',0],['Pass accuracy','pass_accuracy','%',0],['Pressure index','pressure_index','',0],['Progr. passes','progressive_passes','',0],['Ball recoveries','ball_recoveries','',0]];
+ $('strip').innerHTML=defs.map(([n,k,u,bar])=>{const v=m[k],f=t=>v&&v[t]!=null?v[t]+u:'—',a=f('TEAM_A'),b=f('TEAM_B');
+  const bars=bar&&v&&v.TEAM_A!=null?`<i style="width:${v.TEAM_A}%"></i><u style="width:${v.TEAM_B}%"></u>`:'';
+  return `<div class="panel card" title="${teamName('TEAM_A')} | ${teamName('TEAM_B')}"><div class="lab">${n}</div><div class="v"><b class="${a==='—'?'na':''}">${a}</b><span class="na">${b}</span></div><div class="bar">${bars}</div></div>`}).join('');
+}
+function renderStatic(){
+ document.querySelectorAll('.tn').forEach(e=>e.textContent=teamName(e.dataset.t));
+ $('nA').textContent=teamName('TEAM_A');$('nB').textContent=teamName('TEAM_B');
+ for(const [k,T] of [['A','TEAM_A'],['B','TEAM_B']]){
+  {const mine=PASSES.filter(q=>q.team===T),c=o=>mine.filter(q=>q.outcome===o).length;$(k+'cnt').textContent=mine.length?`${c('completed')} completed · ${c('failed')} lost · ${c('uncertain')} uncertain`:'0 passes'}
+  const passes=PASSES.filter(p=>p.team===T&&p.start_pitch&&p.end_pitch);
+  // passes
+  let c=$(k+'0'),[w,h]=sizeCanvas(c),x=c.getContext('2d');pitch(x,w,h);
+  $(k+'0E').style.display=passes.length?'none':'flex';$(k+'0E').textContent=PASSES.some(q=>q.team===T)?'Passes found. Calibrate the pitch to draw them':'No passes detected';
+  for(const p of passes){x.strokeStyle=p.outcome==='completed'?COL[T]:(p.outcome==='failed'?'#ff8a00':NONE);x.setLineDash(p.outcome==='uncertain'?[4,3]:[]);x.lineWidth=1.6;arrow(x,[p.start_pitch[0]*w,p.start_pitch[1]*h],[p.end_pitch[0]*w,p.end_pitch[1]*h])}x.lineWidth=1;
+  x.setLineDash([]);
+  // network
+  c=$(k+'1');[w,h]=sizeCanvas(c);x=c.getContext('2d');pitch(x,w,h);
+  const done=passes.filter(p=>p.outcome==='completed'&&p.from&&p.to);
+  $(k+'1E').style.display=done.length?'none':'flex';$(k+'1E').textContent=PASSES.some(q=>q.team===T&&q.outcome==='completed')?'Calibrate the pitch to draw the network':'No completed passes, no network';
+  const pos={},edges={};
+  for(const p of done){(pos[p.from]??=[]).push(p.start_pitch);(pos[p.to]??=[]).push(p.end_pitch);const e=p.from+'>'+p.to;edges[e]=(edges[e]||0)+1}
+  const avg=id=>{const a=pos[id];return[a.reduce((s,v)=>s+v[0],0)/a.length,a.reduce((s,v)=>s+v[1],0)/a.length]};
+  for(const [e,n] of Object.entries(edges)){const [f,t]=e.split('>'),a=avg(f),b=avg(t);x.strokeStyle=COL[T];x.globalAlpha=.7;x.lineWidth=1+n;x.beginPath();x.moveTo(a[0]*w,a[1]*h);x.lineTo(b[0]*w,b[1]*h);x.stroke()}
+  x.globalAlpha=1;x.lineWidth=1;x.fillStyle='#fff';
+  for(const id in pos){const a=avg(id);x.beginPath();x.arc(a[0]*w,a[1]*h,4,0,7);x.fill();x.font='9px Inter';x.fillText(id,a[0]*w+6,a[1]*h-4)}
+  // heatmap
+  c=$(k+'2');[w,h]=sizeCanvas(c);x=c.getContext('2d');pitch(x,w,h);
+  const g=HEAT[T];$(k+'2E').style.display=g?'none':'flex';$(k+'2E').textContent=CAL.length?'Not enough mapped observations yet':'Calibrate the pitch to build heatmaps';
+  if(g){const ny=g.length,nx=g[0].length;for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const v=g[j][i];if(v<.04)continue;x.fillStyle=`hsla(${240-v*240},100%,50%,${Math.min(.9,.15+v)})`;x.fillRect(i*w/nx,j*h/ny,w/nx+1,h/ny+1)}pitch2(x,w,h)}
+ }
+}
+function pitch2(x,w,h){const t=document.createElement('canvas');t.width=w;t.height=h;pitch(t.getContext('2d'),w,h);x.drawImage(t,0,0)}
+
+// ---- time-synced parts
+function frameAt(ms){ if(!S||!S.frames.length)return null;const F=S.frames;let lo=0,hi=F.length-1;
+ while(lo<hi){const m=(lo+hi)>>1;F[m].t_ms<ms?lo=m+1:hi=m}
+ const f=(lo>0&&Math.abs(F[lo-1].t_ms-ms)<Math.abs(F[lo].t_ms-ms))?F[lo-1]:F[lo];
+ return Math.abs(f.t_ms-ms)<=250?f:null; }  // never show a result that belongs to a different moment
+function fmt(s){s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function draw(){
+ const v=$('vid'),ms=v.currentTime*1000,f=frameAt(ms);
+ $('tm').textContent=fmt(v.currentTime);$('clk').textContent=fmt(v.currentTime);
+ {let le=null;for(const q of PASSES){if(q.t_end_ms<=ms)le=q;else break}
+  const txt=le?`${fmt(le.t_end_ms/1000)}  ${le.outcome==='completed'?'Pass':le.outcome==='failed'?'Pass lost to opponent':'Possible pass'} · ${teamName(le.team)} ${le.from} to ${le.to} (auto-detected)`:'No events detected yet';
+  if(txt!==lastEv){lastEv=txt;$('ev').textContent=txt}}
+ if(v.duration)$('seek').value=v.currentTime/v.duration*1000;
+ const o=$('ov'),[w,h]=sizeCanvas(o),x=o.getContext('2d');x.clearRect(0,0,w,h);
+ const vw=v.videoWidth||1,vh=v.videoHeight||1,sc=Math.min(w/vw,h/vh),ox=(w-vw*sc)/2,oy=(h-vh*sc)/2;TR={sc,ox,oy,vw,vh};if(calMode){drawCal(x);drawRef()}
+ const mm=$('mm'),[mw,mh]=sizeCanvas(mm),mx=mm.getContext('2d');pitch(mx,mw,mh,'#0b2a16');
+ const pc=$('pc'),[pw,ph]=sizeCanvas(pc),px=pc.getContext('2d');pitch(px,pw,ph);
+ drawPress();
+ let mapped=0,A=[],B=[];
+ if(f){
+  $('frameinfo').textContent='t='+f.t_ms+' ms · calib '+f.calibration_conf;
+  for(const p of f.players){
+   if(p.predicted||!p.bbox)continue;           // predicted/lost tracks are never drawn as detections
+   const c=COL[p.team_id]||NONE,[x1,y1,x2,y2]=p.bbox.map((q,i)=>i%2?oy+q*sc:ox+q*sc);
+   x.strokeStyle=c;x.lineWidth=1.5;x.strokeRect(x1,y1,x2-x1,y2-y1);
+   x.fillStyle=c;x.beginPath();x.ellipse((x1+x2)/2,y2,(x2-x1)/2,3,0,0,7);x.fill();
+   x.font='600 10px Inter';const t=p.jersey?('#'+p.jersey):p.player_id,tw=x.measureText(t).width+6;
+   x.fillRect(x1,y1-13,tw,12);x.fillStyle='#fff';x.fillText(t,x1+3,y1-4);
+   const pp=pitchOf(p.ground,f);if(pp){mapped++;(p.team_id==='TEAM_A'?A:B).push(pp);mx.fillStyle=c;mx.beginPath();mx.arc(pp[0]*mw,pp[1]*mh,3.5,0,7);mx.fill()}
+  }
+  if(f.ball){x.strokeStyle='#ffe14a';x.beginPath();x.arc(ox+f.ball.image[0]*sc,oy+f.ball.image[1]*sc,6,0,7);x.stroke();
+   const bp=pitchOf(f.ball.image,f);if(bp){mx.fillStyle='#ffe14a';mx.beginPath();mx.arc(bp[0]*mw,bp[1]*mh,3,0,7);mx.fill()}}
+ }
+ if(f){const ci=inv3(camOf(f));
+  for(const q of PASSES){if(!ci||q.t_ms>ms||ms>q.t_end_ms+1500||segOf(q.from_frame)!==segOf(f)||segOf(q.to_frame)!==segOf(f))continue;
+   const mp=(g,fr)=>{const r=applyH(camOf(fr),g),s=r&&applyH(ci,[r[0],r[1]]);return s?[ox+s[0]*sc,oy+s[1]*sc]:null};
+   const a=mp(q.from_g,q.from_frame),b=mp(q.to_g,q.to_frame);if(!a||!b)continue;
+   x.strokeStyle=q.outcome==='completed'?COL[q.team]:(q.outcome==='failed'?'#ff8a00':NONE);x.lineWidth=2.5;x.setLineDash(q.outcome==='uncertain'?[6,4]:[]);arrow(x,a,b);x.setLineDash([]);x.lineWidth=1}}
+ $('mmE').style.display=mapped?'none':'flex';$('mmE').textContent=CAL.length?'No players mapped on this frame':'Calibrate the pitch to map players';
+ // Pitch control: nearest-player (Voronoi) split. Documented as a simple proxy, not a physics model.
+ if(A.length>=3&&B.length>=3){$('pcE').style.display='none';const n=40,m=26;let a=0;
+  for(let j=0;j<m;j++)for(let i=0;i<n;i++){const X=(i+.5)/n,Y=(j+.5)/m;const d=P=>P.reduce((s,q)=>Math.min(s,(q[0]-X)**2+((q[1]-Y)*.65)**2),9);const ca=d(A)<d(B);a+=ca;
+   px.fillStyle=ca?'rgba(224,32,58,.5)':'rgba(47,123,255,.5)';px.fillRect(i*pw/n,j*ph/m,pw/n+1,ph/m+1)}
+  pitch2(px,pw,ph);$('pcv').textContent=Math.round(a/(n*m)*100)+'% / '+Math.round(100-a/(n*m)*100)+'%';
+  A.concat(B);for(const [P,c] of [[A,COL.TEAM_A],[B,COL.TEAM_B]])for(const q of P){px.fillStyle='#fff';px.beginPath();px.arc(q[0]*pw,q[1]*ph,2.5,0,7);px.fill()}
+ } else {$('pcE').style.display='flex';$('pcv').textContent='—'}
+ requestAnimationFrame(draw);
+}
+
+/*MATH*/
+function gauss(A,b){const n=b.length;A=A.map((r,i)=>[...r,b[i]]);
+ for(let c=0;c<n;c++){let m=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[m][c]))m=r;
+  if(Math.abs(A[m][c])<1e-12)return null;[A[c],A[m]]=[A[m],A[c]];
+  for(let r=0;r<n;r++){if(r===c)continue;const f=A[r][c]/A[c][c];for(let k=c;k<=n;k++)A[r][k]-=f*A[c][k]}}
+ return A.map((r,i)=>r[n]/r[i]);}
+function solveH(pairs,s){const AtA=Array.from({length:8},()=>new Array(8).fill(0)),Atb=new Array(8).fill(0);
+ const add=(row,b)=>{for(let i=0;i<8;i++){Atb[i]+=row[i]*b;for(let j=0;j<8;j++)AtA[i][j]+=row[i]*row[j]}};
+ for(const p of pairs){const x=p.img[0]/s,y=p.img[1]/s,X=p.pt[0],Y=p.pt[1];
+  add([x,y,1,0,0,0,-x*X,-y*X],X);add([0,0,0,x,y,1,-x*Y,-y*Y],Y)}
+ const h=gauss(AtA,Atb);if(!h)return null;
+ return [h[0]/s,h[1]/s,h[2],h[3]/s,h[4]/s,h[5],h[6]/s,h[7]/s,1];}
+function applyH(H,p){const w=H[6]*p[0]+H[7]*p[1]+H[8];if(Math.abs(w)<1e-12)return null;
+ return [(H[0]*p[0]+H[1]*p[1]+H[2])/w,(H[3]*p[0]+H[4]*p[1]+H[5])/w,w];}
+function inv3(m){const[a,b,c,d,e,f,g,h,i]=m,A=e*i-f*h,B=-(d*i-f*g),C=d*h-e*g,det=a*A+b*B+c*C;if(Math.abs(det)<1e-14)return null;
+ return[A,-(b*i-c*h),b*f-c*e,B,a*i-c*g,-(a*f-c*d),C,-(a*h-b*g),a*e-b*d].map(v=>v/det);}
+function errMetres(H,pairs){return pairs.reduce((s,p)=>{const q=applyH(H,p.img);return s+(q?Math.hypot((q[0]-p.pt[0])*105,(q[1]-p.pt[1])*68):1e3)},0)/pairs.length;}
+function mul3(a,b){const r=[];for(let i=0;i<3;i++)for(let j=0;j<3;j++)r.push(a[i*3]*b[j]+a[i*3+1]*b[3+j]+a[i*3+2]*b[6+j]);return r}
+/*ENDMATH*/
+const PL=105,PW=68,pa=16.5/PL,pw_=[(68-40.32)/2/PW],six=5.5/PL,s0=(68-18.32)/2/PW,p0=(68-40.32)/2/PW;
+const LM=[[0,0],[0,1],[1,0],[1,1],[.5,0],[.5,1],[.5,.5],
+ [0,p0],[0,1-p0],[1,p0],[1,1-p0],[pa,p0],[pa,1-p0],[1-pa,p0],[1-pa,1-p0],
+ [0,s0],[0,1-s0],[1,s0],[1,1-s0],[six,s0],[six,1-s0],[1-six,s0],[1-six,1-s0],
+ [11/PL,.5],[1-11/PL,.5],[.5-9.15/PL,.5],[.5+9.15/PL,.5],[.5,.5-9.15/PW],[.5,.5+9.15/PW]];
+const circ=Array.from({length:49},(_,i)=>[.5+9.15/PL*Math.cos(i/48*6.2832),.5+9.15/PW*Math.sin(i/48*6.2832)]);
+const LINES=[[[0,0],[1,0],[1,1],[0,1],[0,0]],[[.5,0],[.5,1]],
+ [[0,p0],[pa,p0],[pa,1-p0],[0,1-p0]],[[1,p0],[1-pa,p0],[1-pa,1-p0],[1,1-p0]],
+ [[0,s0],[six,s0],[six,1-s0],[0,1-s0]],[[1,s0],[1-six,s0],[1-six,1-s0],[1,1-s0]],circ];
+
+let CAL=[],PAIRS=[],PEND=null,calMode=false,TR={sc:1,ox:0,oy:0,vw:1,vh:1},HEAT={TEAM_A:null,TEAM_B:null};
+const calKey=()=>'tv_cal_'+(($('vf').files[0]||{}).name||'video');
+function saveCal(){try{localStorage.setItem(calKey(),JSON.stringify(CAL))}catch(e){}}
+function loadCal(){try{CAL=JSON.parse(localStorage.getItem(calKey())||'[]').map(c=>({seg:0,...c}))}catch(e){CAL=[]}computeHeat();}
+const camOf=f=>(f&&f.cam)||[1,0,0,0,1,0,0,0,1],segOf=f=>(f&&f.seg)||0;
+function pseudoFrame(ms){return frameAt(ms)||{t_ms:Math.round(ms),seg:0,cam:null,players:[]}}
+function calFor(f){const s=segOf(f),l=CAL.filter(c=>c.seg===s);if(!l.length)return null;let c=l[0];for(const k of l)if(k.t_ms<=f.t_ms)c=k;return c}
+function mapM(c,f){let M=mul3(c.H,camOf(f));const w0=M[6]*TR.vw/2+M[7]*TR.vh/2+M[8];if(w0<0)M=M.map(v=>-v);return M}   // frame-t image -> pitch
+function pitchOf(g,f){if(!g||!f)return null;const c=calFor(f);if(!c)return null;const q=applyH(mapM(c,f),g);
+ if(!q||q[2]<=0||q[0]<-.02||q[0]>1.02||q[1]<-.02||q[1]>1.02)return null;return[Math.min(1,Math.max(0,q[0])),Math.min(1,Math.max(0,q[1]))]}
+function blur(g,nx,ny,s){const r=Math.ceil(s*3),k=[];let sum=0;for(let i=-r;i<=r;i++){const v=Math.exp(-i*i/(2*s*s));k.push(v);sum+=v}
+ const t=g.map(r=>r.slice());for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){let a=0;for(let d=-r;d<=r;d++){const q=i+d;if(q>=0&&q<nx)a+=g[j][q]*k[d+r]}t[j][i]=a/sum}
+ const o=t.map(r=>r.slice());for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){let a=0;for(let d=-r;d<=r;d++){const q=j+d;if(q>=0&&q<ny)a+=t[q][i]*k[d+r]}o[j][i]=a/sum}return o}
+function computeHeat(){computePasses();HEAT={TEAM_A:null,TEAM_B:null};
+ if(S&&CAL.length){const nx=52,ny=34;for(const T of ['TEAM_A','TEAM_B']){let g=Array.from({length:ny},()=>new Array(nx).fill(0)),n=0;
+  for(const f of S.frames)for(const p of f.players){if(p.predicted||p.team_id!==T||!p.ground)continue;const q=pitchOf(p.ground,f);if(!q)continue;
+   g[Math.min(ny-1,Math.floor(q[1]*ny))][Math.min(nx-1,Math.floor(q[0]*nx))]+=p.det_conf||1;n++}
+  if(n>=10){g=blur(g,nx,ny,1.4);const mx=Math.max(...g.flat());HEAT[T]=g.map(r=>r.map(v=>v/mx))}}}
+ renderStrip();renderStatic();summary();}
+function drawCal(x){
+ const T=(px,py)=>[TR.ox+px*TR.sc,TR.oy+py*TR.sc];
+ const fr=pseudoFrame($('vid').currentTime*1000),c=calFor(fr);
+ if(c&&$('lines').checked){const M=mapM(c,fr),Hi=inv3(M);if(Hi){x.strokeStyle='rgba(44,255,122,.9)';x.lineWidth=1.5;
+  for(const L of LINES){let pen=false;x.beginPath();for(let i=0;i<L.length*(L===circ?1:8);i++){
+   const u=L===circ?L[i]:(()=>{const s=i/8,j=Math.floor(s),f=s-j,a=L[j],b=L[Math.min(L.length-1,j+1)];return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]})();
+   const q=applyH(Hi,u);const fw=q&&applyH(M,q);const ok=q&&fw&&fw[2]>0&&Math.abs(q[0])<TR.vw*3&&Math.abs(q[1])<TR.vh*3;
+   if(!ok){pen=false;continue}const [cx,cy]=T(q[0],q[1]);pen?x.lineTo(cx,cy):x.moveTo(cx,cy);pen=true}x.stroke()}}}
+ x.font='700 11px Inter';PAIRS.forEach((p,i)=>{const [cx,cy]=T(p.img[0],p.img[1]);x.fillStyle='#ffe14a';x.beginPath();x.arc(cx,cy,5,0,7);x.fill();x.fillStyle='#000';x.fillText(i+1,cx-3,cy+4)});
+ if(PEND){const [cx,cy]=T(PEND[0],PEND[1]);x.strokeStyle='#ffe14a';x.lineWidth=2;x.beginPath();x.arc(cx,cy,8,0,7);x.stroke()}
+}
+function drawRef(){const c=$('rf'),[w,h]=sizeCanvas(c),x=c.getContext('2d');pitch(x,w,h,'#0b1a12');
+ const used=new Set(PAIRS.map(p=>p.lm));LM.forEach((l,i)=>{x.fillStyle=used.has(i)?'#ffe14a':'#2cff7a';x.beginPath();x.arc(l[0]*w,l[1]*h,used.has(i)?5:3.5,0,7);x.fill()});
+ PAIRS.forEach((p,i)=>{x.fillStyle='#000';x.font='700 9px Inter';x.fillText(i+1,LM[p.lm][0]*w-3,LM[p.lm][1]*h+3)})}
+function calMsg(){$('calmsg').innerHTML=PEND?'<b>Step 2:</b> click the matching spot on the diagram.':`<b>Step 1:</b> click a visible pitch point on the video. Points so far: <b>${PAIRS.length}</b> (need 4+).`}
+function openCal(){calMode=true;$('vid').pause();$('pp').textContent='Play';$('calp').style.display='block';document.querySelector('.cv').classList.add('cal');calMsg();
+ const fr=pseudoFrame($('vid').currentTime*1000),c=calFor(fr);$('calres').textContent=c?`This shot is calibrated (error ${c.err.toFixed(2)} m). ${CAL.length} calibration(s) saved.`:`No calibration for this shot (shot ${segOf(fr)+1}).`}
+$('cal').onclick=openCal;
+$('calx').onclick=()=>{calMode=false;$('calp').style.display='none';document.querySelector('.cv').classList.remove('cal')};
+$('calu').onclick=()=>{if(PEND)PEND=null;else PAIRS.pop();calMsg()};
+$('calc').onclick=()=>{CAL=[];PAIRS=[];PEND=null;saveCal();computeHeat();calMsg();$('calres').textContent='Cleared.'};
+$('ov').addEventListener('click',e=>{if(!calMode)return;const r=e.target.getBoundingClientRect(),d=$('ov').width/r.width;
+ const px=((e.clientX-r.left)*d-TR.ox)/TR.sc,py=((e.clientY-r.top)*d-TR.oy)/TR.sc;
+ if(px<0||py<0||px>TR.vw||py>TR.vh)return;PEND=[px,py];calMsg()});
+$('rf').addEventListener('click',e=>{if(!calMode)return;if(!PEND){$('calmsg').innerHTML='<b>Click the video first</b>, then the diagram.';return}
+ const r=e.target.getBoundingClientRect(),fx=(e.clientX-r.left)/r.width,fy=(e.clientY-r.top)/r.height;
+ let best=-1,bd=7;LM.forEach((l,i)=>{if(PAIRS.some(p=>p.lm===i))return;const dd=Math.hypot((l[0]-fx)*PL,(l[1]-fy)*PW);if(dd<bd){bd=dd;best=i}});
+ if(best<0){$('calmsg').innerHTML='No free landmark there. Click closer to a green dot.';return}
+ PAIRS.push({img:PEND,pt:LM[best],lm:best});PEND=null;calMsg()});
+$('calok').onclick=()=>{if(PAIRS.length<4){$('calres').textContent='Need at least 4 points.';return}
+ const H=solveH(PAIRS,TR.vw);if(!H){$('calres').textContent='Could not solve: points are too close to a line. Add points off that line.';return}
+ const err=errMetres(H,PAIRS);
+ if(err>3){$('calres').textContent=`Error ${err.toFixed(1)} m is too high. Check that each pair matches the same spot, or undo and redo.`;return}
+ const fr=pseudoFrame($('vid').currentTime*1000),ci=inv3(camOf(fr));if(!ci){$('calres').textContent='Camera data for this frame is invalid. Try another frame.';return}
+ const seg=segOf(fr),t=fr.t_ms;CAL=CAL.filter(c=>!(c.seg===seg&&c.t_ms===t));CAL.push({seg,t_ms:t,H:mul3(H,ci),err,n:PAIRS.length});CAL.sort((a,b)=>a.seg-b.seg||a.t_ms-b.t_ms);
+ const n=PAIRS.length;PAIRS=[];PEND=null;saveCal();computeHeat();calMsg();$('calres').textContent=`Applied to camera shot ${seg+1}; pans and zooms in it are followed automatically. Mean landmark error ${err.toFixed(2)} m over ${n} points. Green lines should sit on the real pitch lines.`};
+
+
+/*PASS*/
+const PC={ctrlD:.7,ambig:1.35,minHold:160,gapClose:400,maxGap:3000,okGap:2500,minDisp:1.2,ballConf:.15,recWin:5000,pressR:2.5,maxSpeedH:5};
+function toRef(f,p){const c=(f&&f.cam)||[1,0,0,0,1,0,0,0,1],w=c[6]*p[0]+c[7]*p[1]+c[8];return[(c[0]*p[0]+c[1]*p[1]+c[2])/w,(c[3]*p[0]+c[4]*p[1]+c[5])/w]}
+function ballOwner(f,cfg,pb){const b=f.ball;if(!b||b.conf<cfg.ballConf)return{state:'noball'};const c=[];
+ for(const p of f.players){if(p.predicted||!p.bbox||!p.ground||!p.team_id)continue;const h=p.bbox[3]-p.bbox[1];if(h<8)continue;
+  const d=Math.hypot(b.image[0]-p.ground[0],b.image[1]-p.ground[1])/h;
+  if(d<=cfg.ctrlD&&b.image[1]>p.bbox[1]+.35*h)c.push({p,d,h})}
+ c.sort((a,b)=>a.d-b.d);if(!c.length)return{state:'loose'};
+ if(c.length>1&&c[1].p.team_id!==c[0].p.team_id&&c[1].d<cfg.ambig*c[0].d)return{state:'loose'};  // contested: no owner
+ if(pb){const rf=toRef(f,b.image),dt=(f.t_ms-pb.t)/1000;           // ball in flight (fast, camera motion removed) cannot be 'owned'
+  if(dt>0&&dt<=.5&&Math.hypot(rf[0]-pb.ref[0],rf[1]-pb.ref[1])/dt/c[0].h>cfg.maxSpeedH)return{state:'loose'}}
+ return{state:'owned',p:c[0].p,h:c[0].h}}
+function topKey(o){let b=null,n=0;for(const k in o)if(o[k]>n){n=o[k];b=k}return b}
+function detectPasses(frames,pitchOf,cfg){
+ const segs=[],press=[],poss={TEAM_A:0,TEAM_B:0};let cur=null,pb=null;
+ const close=()=>{if(cur&&(cur.tEnd-cur.tStart>=cfg.minHold||cur.n>=2))segs.push(cur);cur=null};
+ for(let i=0;i<frames.length;i++){const f=frames[i],o=ballOwner(f,cfg,pb),dt=i+1<frames.length?Math.min(500,frames[i+1].t_ms-f.t_ms):0;
+  pb=(f.ball&&f.ball.conf>=cfg.ballConf)?{ref:toRef(f,f.ball.image),t:f.t_ms}:null;
+  if(o.state==='owned'){const pid=o.p.player_id,tm=o.p.team_id;if(tm in poss)poss[tm]+=dt;
+   {const opp=tm==='TEAM_A'?'TEAM_B':'TEAM_A';let n=0;                 // pressure on the carrier: opponents within pressR player-heights
+    for(const q of f.players){if(q.predicted||!q.ground||q.team_id!==opp)continue;if(Math.hypot(q.ground[0]-o.p.ground[0],q.ground[1]-o.p.ground[1])/o.h<=cfg.pressR)n++}
+    if(tm in poss)press.push({t:f.t_ms,team:opp,n})}
+   if(cur&&cur.pid===pid){cur.tEnd=f.t_ms;cur.endFrame=f;cur.n++;if(f.ball.interp)cur.interp++;cur.endGround=o.p.ground;cur.endBall=f.ball.image;cur.hs.push(o.h);cur.teams[tm]=(cur.teams[tm]||0)+1}
+   else{close();cur={pid,interp:f.ball.interp?1:0,startFrame:f,endFrame:f,tStart:f.t_ms,tEnd:f.t_ms,n:1,startGround:o.p.ground,endGround:o.p.ground,startBall:f.ball.image,endBall:f.ball.image,hs:[o.h],teams:{[tm]:1}}}}
+  else if(cur&&f.t_ms-cur.tEnd>cfg.gapClose)close()}
+ close();
+ const passes=[],recov={TEAM_A:0,TEAM_B:0};
+ for(let i=1;i<segs.length;i++){const a=segs[i-1],b=segs[i];if(a.pid===b.pid)continue;
+  const gap=b.tStart-a.tEnd;if(gap>cfg.maxGap)continue;const ta=topKey(a.teams),tb=topKey(b.teams);if(!ta||!tb)continue;
+  if(ta!==tb&&gap<=cfg.recWin)recov[tb]++;                     // possession won from the other team
+  const hh=a.hs.concat(b.hs),h=hh.reduce((s,v)=>s+v,0)/hh.length;
+  const disp=Math.hypot(a.endBall[0]-b.startBall[0],a.endBall[1]-b.startBall[1])/h;
+  if(disp<cfg.minDisp)continue;                                // too short to call it a pass (touch, duel)
+  const weak=a.interp/a.n>.5||b.interp/b.n>.5;                  // ball at either end mostly interpolated: do not trust
+  const outcome=ta===tb?(gap<=cfg.okGap&&!weak?'completed':'uncertain'):(weak?'uncertain':'failed');
+  passes.push({auto:true,from_frame:a.endFrame,to_frame:b.startFrame,from_g:a.endGround,to_g:b.startGround,t_ms:a.tEnd,t_end_ms:b.tStart,team:ta,to_team:tb,from:a.pid,to:b.pid,outcome,gap_ms:gap,
+   start_pitch:pitchOf(a.endGround,a.endFrame),end_pitch:pitchOf(b.startGround,b.startFrame)})}
+ return{passes,segs,poss,recov,press}}
+function buildMetrics(r,atkRight){const m={},T=['TEAM_A','TEAM_B'];
+ const tot=r.poss.TEAM_A+r.poss.TEAM_B;
+ if(tot>=3000){const a=Math.round(r.poss.TEAM_A/tot*100);m.possession={TEAM_A:a,TEAM_B:100-a}}
+ const acc={};let any=false;for(const t of T){const q=r.passes.filter(p=>p.team===t&&p.outcome!=='uncertain');
+  if(q.length){acc[t]=Math.round(q.filter(p=>p.outcome==='completed').length/q.length*100);any=true}else acc[t]=null}
+ if(any)m.pass_accuracy=acc;
+ if(r.press&&r.press.length){const pi={};let any=false;for(const t of T){const q=r.press.filter(s=>s.team===t);
+  if(q.length>=8){pi[t]=Math.round(q.reduce((s,v)=>s+v.n,0)/q.length*10)/10;any=true}else pi[t]=null}if(any)m.pressure_index=pi}
+ if(r.segs.length>=3)m.ball_recoveries={TEAM_A:r.recov.TEAM_A,TEAM_B:r.recov.TEAM_B};
+ if(atkRight!==null&&r.segs.length>=3){const pr={TEAM_A:0,TEAM_B:0};
+  for(const p of r.passes){if(p.outcome!=='completed'||!p.start_pitch||!p.end_pitch)continue;
+   const gx=(p.team==='TEAM_A')===atkRight?1:0,d=q=>Math.hypot((gx-q[0])*105,(q[1]-.5)*68),d0=d(p.start_pitch),d1=d(p.end_pitch);
+   if(d0-d1>=5&&d0-d1>=.25*d0)pr[p.team]++}
+  m.progressive_passes=pr}
+ return m}
+/*ENDPASS*/
+let PASSES=[],SEGS=[],PRESS=[],METRICS={},lastEv='';
+function computePasses(){PC.ctrlD=+$('bl').value;PASSES=[];SEGS=[];PRESS=[];METRICS={};if(!S||!S.frames.length)return;
+ const r=detectPasses(S.frames,(g,fr)=>pitchOf(g,fr),PC);PASSES=r.passes;SEGS=r.segs;PRESS=r.press;
+ const a=$('atk').value;METRICS=buildMetrics(r,a===''?null:a==='r')}
+$('atk').onchange=()=>computeHeat();
+$('dlp').onclick=()=>{const hd='team,from,to,outcome,time_s,gap_ms,start_x,start_y,end_x,end_y,source\n',f=v=>v==null?'':(+v).toFixed(4);
+ const rows=PASSES.map(q=>[q.team,q.from,q.to,q.outcome,(q.t_ms/1000).toFixed(2),q.gap_ms,f(q.start_pitch&&q.start_pitch[0]),f(q.start_pitch&&q.start_pitch[1]),f(q.end_pitch&&q.end_pitch[0]),f(q.end_pitch&&q.end_pitch[1]),'auto'].join(','));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([hd+rows.join('\n')],{type:'text/csv'}));a.download='passes.csv';a.click()};$('bl').onchange=()=>computeHeat();
+function drawPress(){const c=$('pr'),[w,h]=sizeCanvas(c),x=c.getContext('2d');x.clearRect(0,0,w,h);
+ const ok=PRESS.length>=8;$('prE').style.display=ok?'none':'flex';if(!ok)return;
+ const dur=Math.max(5000,($('vid').duration||0)*1000,S.frames[S.frames.length-1].t_ms),B=5000,nb=Math.ceil(dur/B);
+ const bins={TEAM_A:Array.from({length:nb},()=>[0,0]),TEAM_B:Array.from({length:nb},()=>[0,0])};
+ for(const s of PRESS){const i=Math.min(nb-1,Math.floor(s.t/B));bins[s.team][i][0]+=s.n;bins[s.team][i][1]++}
+ let mx=3;for(const t in bins)for(const b of bins[t])if(b[1])mx=Math.max(mx,b[0]/b[1]);mx=Math.ceil(mx);
+ const L=26,R=8,T=14,Bm=18,pw=w-L-R,ph=h-T-Bm,X=i=>L+(i+.5)/nb*pw,Y=v=>T+ph-(v/mx)*ph;
+ x.font='10px Inter';x.strokeStyle='#123';x.fillStyle='#7d8a84';x.lineWidth=1;
+ for(let v=0;v<=mx;v++){x.beginPath();x.moveTo(L,Y(v));x.lineTo(L+pw,Y(v));x.stroke();x.fillText(v,6,Y(v)+3)}
+ x.fillText('opponents near carrier, 5 s avg',L,10);
+ x.fillText('0:00',L,h-4);x.fillText(fmt(dur/1000),L+pw-24,h-4);
+ for(const t of ['TEAM_A','TEAM_B']){x.strokeStyle=COL[t];x.lineWidth=2;let pen=false;x.beginPath();
+  bins[t].forEach((b,i)=>{if(!b[1]){pen=false;return}const v=b[0]/b[1];pen?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v));pen=true});x.stroke()}
+ const cx=L+Math.min(1,($('vid').currentTime*1000)/dur)*pw;x.strokeStyle='#2cff7a';x.lineWidth=1;x.beginPath();x.moveTo(cx,T);x.lineTo(cx,T+ph);x.stroke()}
+function summary(){if(!S||!S.frames.length)return;const F=S.frames;let ball=0,own=0;
+ for(const f of F){const o=ballOwner(f,PC);if(o.state!=='noball')ball++;if(o.state==='owned')own++}
+ const pc=v=>Math.round(v/F.length*100);
+ let tot=0,mapd=0;const shots=new Set(F.map(f=>f.seg||0)).size,cs=new Set(CAL.map(c=>c.seg)).size;
+ for(const f of F)for(const q of f.players){if(q.predicted||!q.ground)continue;tot++;if(pitchOf(q.ground,f))mapd++}
+ const mp=tot?Math.round(mapd/tot*100):0;
+ let t=`${F.length} frames · ball seen ${pc(ball)}% · ball owner found ${pc(own)}% · possession spells ${SEGS.length} · passes ${PASSES.length} · camera shots ${shots} · calibrated shots ${cs}${cs?'':' (use Calibrate)'} · players mapped to pitch ${mp}%`;
+ if(shots>cs&&cs>0)t+=' · other camera shots are not calibrated yet: scrub to them and calibrate again';
+ if(pc(ball)<20)t+=' · the ball is rarely detected, so passes will be sparse or missing';
+ else if(SEGS.length<3)t+=' · too few possession spells: the ball and players are rarely close enough to link';
+ $('msg').textContent=t}
+
+// ---- data loading
+function loadState(s){S=s;computeHeat();$('live').textContent=S.frames.length?'ANALYSED':'EMPTY';renderStrip();sideCols();renderStatic();
+ $('dbg').onclick=()=>{const d=$('diag');d.style.display=d.style.display==='block'?'none':'block';
+  const ids=new Set();S.frames.forEach(f=>f.players.forEach(p=>ids.add(p.player_id)));
+  d.textContent=`frames: ${S.frames.length}\nunique player IDs: ${ids.size}\nmedian latency: ${S.meta.median_latency_ms?.toFixed(1)} ms | p95: ${S.meta.p95_latency_ms?.toFixed(1)} ms\nscheduler-skipped frames: ${S.meta.frames_skipped_by_scheduler}\ncamera cuts: ${S.frames.filter(f=>f.camera_cut).length}\nuncalibrated frames: ${S.frames.filter(f=>f.calibration_conf<.3).length}\naudit events: ${S.audit.length}\n`+S.audit.slice(-30).map(e=>JSON.stringify(e)).join('\n')}}
+$('sf').onchange=async e=>loadState(JSON.parse(await e.target.files[0].text()));
+$('vf').onchange=e=>{VIDEO_URL=URL.createObjectURL(e.target.files[0]);$('vid').src=VIDEO_URL;$('live').textContent='READY';loadCal()};
+$('pp').onclick=()=>{const v=$('vid');v.paused?v.play():v.pause();$('pp').textContent=v.paused?'Play':'Pause'};
+$('seek').oninput=e=>{const v=$('vid');if(v.duration)v.currentTime=e.target.value/1000*v.duration};
+$('rate').onchange=e=>$('vid').playbackRate=+e.target.value;
+$('run').onclick=async()=>{const f=$('vf').files[0];if(!f){$('msg').textContent='Choose a video first.';return}
+ const fd=new FormData();fd.append('video',f);$('msg').textContent='Uploading…';
+ try{const r=await fetch('/api/jobs?mode='+$('mode').value,{method:'POST',body:fd});JOB=(await r.json()).job;$('live').textContent='PROCESSING';
+  const t=setInterval(async()=>{const s=await (await fetch('/api/jobs/'+JOB)).json();$('msg').textContent=s.status+' '+Math.round((s.progress||0)*100)+'%';
+   if(s.status==='done'){clearInterval(t);loadState(await (await fetch('/api/jobs/'+JOB+'/state')).json())}
+   if(s.status==='error'){clearInterval(t);$('msg').textContent='Error: '+s.error}},1500)}
+ catch(err){$('msg').textContent='Server not reachable. Start it (see README) or load a state.json.'}};
+renderStrip();sideCols();renderStatic();draw();addEventListener('resize',renderStatic);
+</script></body></html>

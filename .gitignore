@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.pt
+*.pth
+*.onnx
+*.mp4
+*.mov
+*.mkv
+*.avi
+state.json
+backend/data/
+.vscode/
+.DS_Store
